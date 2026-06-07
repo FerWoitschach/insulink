@@ -1,0 +1,11 @@
+**/.cache/
+**/.git
+**/.kotlin/
+**/.ssh/
+**/.recycle-bin/
+**/.user_home/
+**/build/
+
+**/*.pem
+**/*.pub
+**/.envrc
