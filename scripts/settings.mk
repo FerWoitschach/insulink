@@ -1,0 +1,1 @@
+$(foreach var,$(shell yq -o=json '.' ./app/settings.toml | jq -r 'paths(scalars) as $$path | [($$path | map(tostring) | join(".")), (getpath($$path) | tostring)] | join("=")' | tr ' ' '_'),$(eval $(subst _, ,$(var))))
