@@ -1,5 +1,29 @@
+[app]
+name = "insulink"
+
 [version]
 major = 0
 minor = 0
 patch = 0
 alias = ""
+
+[ai]
+default_model  = "gemini-1.5-pro"
+fallback_model = "gemini-1.5-flash"
+harm_category_dangerous_content = "BLOCK_MEDIUM_AND_ABOVE"
+harm_category_harassment = "BLOCK_MEDIUM_AND_ABOVE"
+harm_category_hate_speech = "BLOCK_MEDIUM_AND_ABOVE"
+harm_category_sexually_explicit = "BLOCK_MEDIUM_AND_ABOVE"
+max_output_tokens = 8192
+temperature = 0.7
+top_k = 40
+top_p = 0.95
+
+[container]
+backend = "podman"
+os = "docker.io/library/debian@sha256:b6e2a152f22a40ff69d92cb397223c906017e1391a73c952b588e51af8883bf8" # trixie-slim
+
+[repo]
+host = "github.com"
+user = "ferwoitschach"
+name = "insulink"

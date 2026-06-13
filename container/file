@@ -1,0 +1,133 @@
+arg os
+
+from ${os}
+
+arg app_name
+
+arg user_name
+arg user_id
+arg user_group_name
+arg user_group_id
+
+arg container_workdir
+
+arg sdkman_dir="/home/${user_name}/.local/sdkman"
+arg android_tools="https://dl.google.com/android/repository/commandlinetools-linux-14742923_latest.zip"
+
+shell ["/bin/bash", "-c"]
+
+env DEBIAN_FRONTEND=noninteractive
+
+run apt update && \
+    apt install --no-install-recommends --assume-yes \
+        bat \
+        btop \
+        ca-certificates \
+        curl \
+        file \
+        fonts-roboto \
+        git \
+        git-lfs \
+        gnupg \
+        iputils-ping \
+        jq \
+        less \
+        locales \
+        lsb-release \
+        make \
+        nano \
+        neovim \
+        openjdk-17-jdk \
+        openssh-server \
+        pkg-config \
+        software-properties-common \
+        sudo \
+        tar \
+        tmux \
+        tree \
+        ouch \
+        unzip \
+        wget \
+        zip \
+        zsh
+
+run getent group $user_group_id || groupadd --gid $user_group_id $user_group_name && \
+    adduser --disabled-password --gecos "" --uid $user_id --gid $user_group_id --shell /bin/zsh --home /home/${user_name}/ $user_name && \
+    echo "${user_name}:pass" | chpasswd && \
+    usermod --append --groups sudo $user_name && \
+    echo "${user_name} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers.d/99-${user_name} && \
+    chmod 0440 /etc/sudoers.d/99-${user_name}
+
+run sed -i 's/^# \(en_US\.UTF-8\)/\1/' /etc/locale.gen && \
+    locale-gen
+
+run mkdir --parents /home/${user_name}/.ssh && \
+    chmod 700 /home/${user_name}/.ssh
+
+copy --chown=${user_name}:${user_group_name} "./.ssh/key.pub" "/home/${user_name}/.ssh/authorized_keys"
+
+run mkdir --parents $container_workdir && \
+    chown --recursive ${user_name}:${user_group_name} /home/${user_name}/ && \
+    chmod 600 /home/${user_name}/.ssh/authorized_keys && \
+    chown --recursive ${user_name}:${user_group_name} /home/${user_name}/.ssh
+
+run apt-get autoremove --assume-yes --purge && \
+    apt-get autoclean  --assume-yes && \
+    rm --force --recursive /tmp/* /var/tmp/* /var/lib/apt/lists/*
+
+user $user_name
+
+run cat >> "/home/${user_name}/.zshrc" <<-EOF
+
+	alias bat="batcat --paging=never"
+	alias buildcfg="nano ${buildcfg}"
+	alias mk=make
+	ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.0.12077973'
+	ANDROID_NDK_ROOT=$ANDROID_NDK_HOME'
+	ANDROID_SDK_ROOT=$ANDROID_HOME'
+	export ANDROID_HOME=$HOME/.android/sdk
+	GRADLE_USER_HOME=/home/debian/workspace/mercurio/components/mobile/gradle/.cache/"
+	HOST_TAG=linux-x86_64"
+	JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64/"
+	LANG='es_ES.UTF-8'
+	LANGUAGE='es_ES:en'
+	NDK=$ANDROID_NDK_HOME'
+	PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH
+	PATH=$HOME/.local/bin:$PATH'
+	PATH=$HOME/.local/sdkman/bin/sdkman-init.sh:$PATH'
+	PATH=$JAVA_HOME/bin:$PATH'
+	PATH=$PATH:$ANDROID_NDK_ROOT'
+	PATH=$TOOLCHAIN/bin:$PATH"
+	TOOLCHAIN=$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/$HOST_TAG"
+	SDKMAN_DIR=${sdkman_dir}
+EOF
+
+run export $sdkman_dir && \
+    curl --silent "https://get.sdkman.io" | bash && \
+    export PATH="${sdkman_dir}/bin/sdkman-init.sh:${PATH}" && \
+    /bin/bash -c "source sdkman-init.sh && sdk install kotlin && sdk install gradle 8.10.2"
+
+run mkdir --parents /tmp/android/ && \
+    mkdir --parents /home/${user_name}/.android/sdk/cmdline-tools/latest/ && \
+    curl --silent --fail --show-error --location $android_tools --output /tmp/android/tools.zip && \
+    ouch decompress --accessible /tmp/android/tools.zip --to /tmp/android/ && \
+    mv /tmp/android/cmdline-tools/* /home/${user_name}/.android/sdk/cmdline-tools/latest/ && \
+    rm --recursive --force /tmp/android/
+
+run export ANDROID_HOME="$HOME/.android/sdk" && \
+    export ANDROID_SDK_ROOT="$HOME/.android/sdk" && \
+    export PATH="$PATH:$HOME/.android/sdk/ndk/27.0.12077973/" && \
+    export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH" && \
+    yes | /home/debian/.android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses && \
+    /bin/bash -c 'until timeout 4m /home/debian/.android/sdk/cmdline-tools/latest/bin/sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;35.0.0" "ndk;27.0.12077973"; do echo "Download stalled, restarting..."; done'
+
+run ln -s /home/debian/.portables/kotlinc/bin/kotlinc /home/debian/.local/bin/kotlinc && \
+    /bin/bash -c "if [ -f ~/.zshrc ]; then cat ~/.zshrc >> ~/.bashrc; fi"
+
+workdir $container_workdir
+
+expose ${ssh_port}/tcp
+
+entrypoint ["/bin/zsh", "-c", "sudo service ssh start && exec \"$@\"", "--"]
+
+cmd ["/bin/zsh"]
