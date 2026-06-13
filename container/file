@@ -40,12 +40,10 @@ run apt update && \
         openjdk-17-jdk \
         openssh-server \
         pkg-config \
-        software-properties-common \
         sudo \
         tar \
         tmux \
         tree \
-        ouch \
         unzip \
         wget \
         zip \
@@ -110,7 +108,7 @@ run export $sdkman_dir && \
 run mkdir --parents /tmp/android/ && \
     mkdir --parents /home/${user_name}/.android/sdk/cmdline-tools/latest/ && \
     curl --silent --fail --show-error --location $android_tools --output /tmp/android/tools.zip && \
-    ouch decompress --accessible /tmp/android/tools.zip --to /tmp/android/ && \
+    unzip -q /tmp/android/tools.zip -d /tmp/android/ && \
     mv /tmp/android/cmdline-tools/* /home/${user_name}/.android/sdk/cmdline-tools/latest/ && \
     rm --recursive --force /tmp/android/
 
