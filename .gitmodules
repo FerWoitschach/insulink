@@ -1,3 +1,6 @@
 [submodule "docs/wiki"]
 	path = docs/wiki
 	url  = https://github.com/FerWoitschach/insulink.wiki.git
+[submodule "include/zoe"]
+	path = include/zoe
+	url = https://github.com/ferwoitschach/zoe.git

@@ -12,6 +12,7 @@ arg user_group_id
 arg container_workdir
 
 arg ssh_port
+arg buildcfg
 
 arg sdkman_dir="/home/${user_name}/.local/sdkman"
 arg android_tools="https://dl.google.com/android/repository/commandlinetools-linux-14742923_latest.zip"
@@ -24,10 +25,11 @@ run apt update && \
     apt install --no-install-recommends --assume-yes \
         bat \
         btop \
+        build-essential \
         ca-certificates \
         curl \
+        cmake \
         file \
-        fonts-roboto \
         git \
         git-lfs \
         gnupg \
@@ -35,7 +37,9 @@ run apt update && \
         jq \
         less \
         locales \
-        lsb-release \
+        ripgrep \
+        fd-find \
+        fzf \
         make \
         nano \
         neovim \
@@ -81,19 +85,19 @@ env LANG='en_US.UTF-8'
 env LANGUAGE='en_US:en'
 
 env JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64/
-env ANDROID_ROOT=${HOME}/.android
-env ANDROID_HOME=${ANDROID_ROOT}/sdk
-env ANDROID_SDK_ROOT=$ANDROID_HOME
-env ANDROID_NDK=$ANDROID_SDK_ROOT/ndk
-env ANDROID_NDK_HOME=${ANDROID_NDK}/27.0.12077973
-env ANDROID_NDK_ROOT=$ANDROID_NDK_HOME
-env NDK=$ANDROID_NDK_HOME
+env ANDROID_ROOT=/home/${user_name}/.android
+env ANDROID_HOME=/home/${user_name}/.android/sdk
+env ANDROID_SDK_ROOT=/home/${user_name}/.android/sdk
+env ANDROID_NDK=/home/${user_name}/.android/sdk/ndk
+env ANDROID_NDK_HOME=/home/${user_name}/.android/sdk/ndk/27.0.12077973
+env ANDROID_NDK_ROOT=/home/${user_name}/.android/sdk/ndk/27.0.12077973
+env NDK=/home/${user_name}/.android/sdk/ndk/27.0.12077973
 env HOST_TAG=linux-x86_64
 env TOOLCHAIN=$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/$HOST_TAG
 env GRADLE_USER_HOME=${container_workdir}/app/gradle/.cache/
 env SDKMAN_DIR=${sdkman_dir}
 
-env PATH="${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin:${ANDROID_SDK_ROOT}/platform-tools:${ANDROID_NDK_ROOT}:${TOOLCHAIN}/bin:${JAVA_HOME}/bin:${SDKMAN_DIR}/bin:/home/${user_name}/.local/bin:${PATH}"
+env PATH="${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin:${ANDROID_SDK_ROOT}/platform-tools:${ANDROID_NDK_ROOT}:${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/${HOST_TAG}/bin:${JAVA_HOME}/bin:${SDKMAN_DIR}/bin:/home/${user_name}/.local/bin:${PATH}"
 
 run cat >> "/home/${user_name}/.zshrc" <<-EOF
 
@@ -105,7 +109,7 @@ run cat >> "/home/${user_name}/.zshrc" <<-EOF
 EOF
 
 run curl --silent "https://get.sdkman.io" | bash && \
-    /bin/bash -c "source ${SDKMAN_DIR}/bin/sdkman-init.sh && sdk install kotlin && sdk install gradle 8.10.2"
+    /bin/bash -c "source ${SDKMAN_DIR}/bin/sdkman-init.sh && sdk install kotlin && sdk install gradle 7.6.6"
 
 run mkdir --parents /tmp/android/ && \
     mkdir --parents /home/${user_name}/.android/sdk/cmdline-tools/latest/ && \
@@ -114,8 +118,8 @@ run mkdir --parents /tmp/android/ && \
     mv /tmp/android/cmdline-tools/* /home/${user_name}/.android/sdk/cmdline-tools/latest/ && \
     rm --recursive --force /tmp/android/
 
-run yes | sdkmanager --licenses && \
-    /bin/bash -c 'until timeout 4m sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;35.0.0" "ndk;27.0.12077973"; do echo "Download stalled, restarting..."; done'
+run yes | "${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager" --licenses && \
+    /bin/bash -c 'until timeout 4m "${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager" --install "platform-tools" "platforms;android-36" "build-tools;35.0.0" "ndk;27.0.12077973"; do echo "Download stalled, restarting..."; done'
 
 workdir $container_workdir
 
